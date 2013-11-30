@@ -76,19 +76,27 @@ _build_ffi_method uv_timer_start => qw/int ptr ptr uint64 unint64/;
 
 _build_ffi_method uv_timer_stop => qw/int ptr/;
 
-sub recurring {
+sub timer     { shift->_timer(0, @_) }
+sub recurring { shift->_timer(1, @_) }
+
+sub _timer {
   my $self  = shift;
+  my $recurring = shift;
+
   my $size  = $self->handle_size('timer');
   my $timer = FFI::Raw::memptr($size);
   $self->uv_timer_init($self->loop, $timer);
+  my $id = $timer->tostr;
 
   my $timeout = shift * 1000;
   my $cb = shift;
-  my $sub = sub { shift->$cb(); return }
+  my $sub =
+    $recurring
+    ? sub { $self->$cb(); return }
+    : sub { $self->$cb(); $self->remove($id); return };
   my $ffi_cb = FFI::Raw::callback($sub, FFI::Raw::void, FFI::Raw::ptr, FFI::int);
-  $self->uv_timer_start($timer, $ffi_cb, $timeout, $timeout);
+  $self->uv_timer_start($timer, $ffi_cb, $timeout, $recurring ? $timeout : 0);
 
-  my $id = $timer->tostr;
   $self->ids->{$id} = $timer;
   return $id
 }
