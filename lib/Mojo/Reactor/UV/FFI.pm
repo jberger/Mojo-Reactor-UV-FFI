@@ -94,7 +94,7 @@ sub _timer {
     $recurring
     ? sub { $self->$cb(); return }
     : sub { $self->$cb(); $self->remove($id); return };
-  my $ffi_cb = FFI::Raw::callback($sub, FFI::Raw::void, FFI::Raw::ptr, FFI::int);
+  my $ffi_cb = FFI::Raw::callback($sub, FFI::Raw::void, FFI::Raw::ptr, FFI::Raw::int);
   $self->uv_timer_start($timer, $ffi_cb, $timeout, $recurring ? $timeout : 0);
 
   $self->ids->{$id} = $timer;
