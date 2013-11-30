@@ -76,6 +76,7 @@ _build_ffi_method uv_timer_start => qw/int ptr ptr uint64 unint64/;
 
 _build_ffi_method uv_timer_stop => qw/int ptr/;
 
+
 sub timer     { shift->_timer(0, @_) }
 sub recurring { shift->_timer(1, @_) }
 
@@ -99,6 +100,14 @@ sub _timer {
 
   $self->ids->{$id} = $timer;
   return $id
+}
+
+_build_ffi_method uv_timer_again => qw/int ptr/;
+
+sub again {
+  my ($self, $id) = @_;
+  my $timer = $self->ids->{$id} or return;
+  $self->uv_timer_again($timer);
 }
 
 sub remove {
