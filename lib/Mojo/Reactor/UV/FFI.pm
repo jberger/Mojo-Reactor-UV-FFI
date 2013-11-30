@@ -31,6 +31,8 @@ has ids => sub { {} };
 has loop => sub { shift->loop_new };
 has running => 0;
 
+sub is_running { shift->running }
+
 sub _build_ffi_method {
   my $name = shift;
   my $caller = caller;
