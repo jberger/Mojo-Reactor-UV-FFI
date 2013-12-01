@@ -3,8 +3,12 @@
 use Mojo::Base -strict;
 
 use Mojo::Reactor::UV::FFI;
+my $r = Mojo::Reactor::UV::FFI->new;
 
-say Mojo::Reactor::UV::FFI->version;
+say $r->version;
 
-say "Size of timer: " . Mojo::Reactor::UV::FFI->handle_size('timer');
+say "Size of timer: " . $r->handle_size('timer');
+
+say 'Instance: ' . $r->loop();
+say "Now: " . $r->now();
 

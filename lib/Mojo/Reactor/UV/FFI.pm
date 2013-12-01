@@ -4,6 +4,7 @@ use Mojo::Base 'Mojo::Reactor';
 
 use List::MoreUtils qw/first_index/;
 use FFI::Raw;
+use Math::Int64; # required when FFI::Raw uses 64 bit ints
 
 use constant LIB => $ENV{MOJO_REACTOR_UV_FFI_LIB} || '/usr/local/lib/libuv.so';
 
@@ -27,7 +28,7 @@ our @Handle_Types = qw/
   signal
 /;
 
-has ids => sub { {} };
+has timers => sub { {} };
 has loop => sub { shift->uv_loop_new };
 has running => 0;
 
@@ -42,6 +43,8 @@ sub _build_ffi_method {
   *{"${caller}::$name"} = $sub;
 }
 
+sub _p ($) { FFI::Raw::MemPtr->new_from_ptr(shift) }
+
 _build_ffi_method uv_version => 'uint';
 
 _build_ffi_method uv_version_string => 'str';
@@ -52,7 +55,9 @@ sub version {
   return Scalar::Util::dualvar($self->uv_version, $self->uv_version_string);
 }
 
-_build_ffi_method uv_loop_new => 'ptr';
+_build_ffi_method uv_strerror => qw/str int/;
+
+_build_ffi_method uv_loop_new => qw/ptr/;
 
 _build_ffi_method uv_run => qw/int ptr int/;
 
@@ -75,6 +80,10 @@ sub stop {
   $self->running(0);
 }
 
+_build_ffi_method uv_now => qw/uint64 ptr/;
+
+sub now { my $self = shift; $self->uv_now($self->loop) }
+
 _build_ffi_method uv_timer_init => qw/int ptr ptr/;
 
 _build_ffi_method uv_timer_start => qw/int ptr ptr uint64 uint64/;
@@ -95,15 +104,20 @@ sub _timer {
   my $id = $timer->tostr;
 
   my $timeout = 1000 * shift;
-  my $cb = shift;
-  my $sub =
-    $recurring
-    ? sub { $self->$cb(); return }
-    : sub { $self->$cb(); $self->remove($id); return };
-  my $ffi_cb = FFI::Raw::callback($sub, FFI::Raw::void, FFI::Raw::ptr, FFI::Raw::int);
+  my $cb = shift or die 'Need cb';
+  my $sub = sub {
+    my ($loop, $err) = @_;
+    $cb->($self); 
+    $self->remove($id) unless $recurring; 
+    return;
+  };
+  my $ffi_cb = FFI::Raw::Callback->new($sub, FFI::Raw::void, FFI::Raw::ptr, FFI::Raw::int);
   $self->uv_timer_start($timer, $ffi_cb, $timeout, $recurring ? $timeout : 0);
 
-  $self->ids->{$id} = $timer;
+  $self->timers->{$id} = {
+    timer => $timer,
+    cb    => [$cb, $sub, $ffi_cb],
+  };
   return $id
 }
 
@@ -111,14 +125,14 @@ _build_ffi_method uv_timer_again => qw/int ptr/;
 
 sub again {
   my ($self, $id) = @_;
-  my $timer = $self->ids->{$id} or return;
-  $self->uv_timer_again($timer);
+  my $timer = $self->timers->{$id} or return;
+  $self->uv_timer_again($timer->{timer});
 }
 
 sub remove {
   my ($self, $id) = @_;
-  my $timer = delete $self->ids->{$id};
-  $self->uv_timer_stop($timer);
+  my $timer = delete $self->timers->{$id};
+  $self->uv_timer_stop($timer->{timer});
 }
 
 _build_ffi_method uv_handle_size => qw/uint uint/;
