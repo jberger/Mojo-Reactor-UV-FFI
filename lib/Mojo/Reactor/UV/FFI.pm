@@ -63,14 +63,11 @@ _build_ffi_method uv_run => qw/int ptr int/;
 
 _build_ffi_method uv_stop => qw/void ptr/;
 
-sub start    { shift->_start(0) }
-sub run_once { shift->_start(1) }
-
-sub _start {
+sub start {
   my $self = shift;
   return if $self->running;
   $self->running(1);
-  $self->uv_run($self->loop, shift);
+  $self->uv_run($self->loop, 0);
 }
 
 sub stop {
@@ -78,6 +75,13 @@ sub stop {
   return unless $self->running;
   $self->uv_stop($self->loop);
   $self->running(0);
+}
+
+sub one_tick {
+  my $self = shift;
+  return if $self->running;
+  local $self->{running} = 1;
+  $self->uv_run($self->loop, 1);
 }
 
 _build_ffi_method uv_now => qw/uint64 ptr/;
