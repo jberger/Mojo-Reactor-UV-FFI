@@ -28,7 +28,7 @@ our @Handle_Types = qw/
 /;
 
 has ids => sub { {} };
-has loop => sub { shift->loop_new };
+has loop => sub { shift->uv_loop_new };
 has running => 0;
 
 sub is_running { shift->running }
@@ -36,7 +36,7 @@ sub is_running { shift->running }
 sub _build_ffi_method {
   my $name = shift;
   my $caller = caller;
-  my $ffi = FFI::Raw->new(LIB, $name, map { FFI::Raw->$_ } @_);
+  my $ffi = FFI::Raw->new(LIB, $name, map { FFI::Raw->can($_)->() } @_);
   my $sub = sub { local @_ = @_; $_[0] = $ffi; goto $ffi->can('call') };
   no strict 'refs';
   *{"${caller}::$name"} = $sub;
@@ -58,23 +58,26 @@ _build_ffi_method uv_run => qw/int ptr int/;
 
 _build_ffi_method uv_stop => qw/void ptr/;
 
-sub start {
+sub start    { shift->_start(0) }
+sub run_once { shift->_start(1) }
+
+sub _start {
   my $self = shift;
   return if $self->running;
   $self->running(1);
-  $self->loop_start($self->loop);
+  $self->uv_run($self->loop, shift);
 }
 
 sub stop {
   my $self = shift;
   return unless $self->running;
-  $self->loop_stop($self->loop);
+  $self->uv_stop($self->loop);
   $self->running(0);
 }
 
 _build_ffi_method uv_timer_init => qw/int ptr ptr/;
 
-_build_ffi_method uv_timer_start => qw/int ptr ptr uint64 unint64/;
+_build_ffi_method uv_timer_start => qw/int ptr ptr uint64 uint64/;
 
 _build_ffi_method uv_timer_stop => qw/int ptr/;
 
@@ -91,7 +94,7 @@ sub _timer {
   $self->uv_timer_init($self->loop, $timer);
   my $id = $timer->tostr;
 
-  my $timeout = shift * 1000;
+  my $timeout = 1000 * shift;
   my $cb = shift;
   my $sub =
     $recurring
