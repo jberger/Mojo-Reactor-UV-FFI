@@ -4,11 +4,10 @@ $ENV{MOJO_REACTOR} ||= __PACKAGE__;
 
 use Mojo::Base 'Mojo::Reactor';
 
+use Mojo::Reactor::UV::FFI::Util ':all';
+
 use List::MoreUtils qw/first_index/;
 use FFI::Raw;
-use Math::Int64; # required when FFI::Raw uses 64 bit ints
-
-use constant LIB => $ENV{MOJO_REACTOR_UV_FFI_LIB} || '/usr/local/lib/libuv.so';
 
 our @Handle_Types = qw/
   unknown
@@ -35,17 +34,6 @@ has loop => sub { shift->uv_loop_new };
 has running => 0;
 
 sub is_running { shift->running }
-
-sub _build_ffi_method {
-  my $name = shift;
-  my $caller = caller;
-  my $ffi = FFI::Raw->new(LIB, $name, map { FFI::Raw->can($_)->() } @_);
-  my $sub = sub { local @_ = @_; $_[0] = $ffi; goto $ffi->can('call') };
-  no strict 'refs';
-  *{"${caller}::$name"} = $sub;
-}
-
-sub _p ($) { FFI::Raw::MemPtr->new_from_ptr(shift) }
 
 _build_ffi_method uv_version => 'uint';
 
@@ -95,7 +83,6 @@ _build_ffi_method uv_timer_init => qw/int ptr ptr/;
 _build_ffi_method uv_timer_start => qw/int ptr ptr uint64 uint64/;
 
 _build_ffi_method uv_timer_stop => qw/int ptr/;
-
 
 sub timer     { shift->_timer(0, @_) }
 sub recurring { shift->_timer(1, @_) }
