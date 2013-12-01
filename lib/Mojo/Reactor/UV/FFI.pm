@@ -113,7 +113,7 @@ sub _timer {
   my $cb = shift or die 'Need cb';
   my $sub = sub {
     my ($loop, $err) = @_;
-    $cb->($self); 
+    $self->_sandbox("Timer $id", $cb); 
     $self->remove($id) unless $recurring; 
     return;
   };
@@ -149,7 +149,10 @@ sub handle_size {
   return $self->uv_handle_size(first_index { $_ eq $type } @Handle_Types);
 }
 
-
+sub _sandbox {
+  my ($self, $event, $cb) = (shift, shift, shift);
+  eval { $self->$cb(@_); 1 } or $self->emit(error => "$event failed: $@");
+}
 
 1;
 
