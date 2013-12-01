@@ -120,7 +120,7 @@ sub _timer {
 
   $self->timers->{$id} = {
     timer => $timer,
-    cb    => [$cb, $sub, $ffi_cb],
+    cb    => $ffi_cb,
   };
   return $id
 }
