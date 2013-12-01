@@ -35,9 +35,9 @@ has running => 0;
 
 sub is_running { shift->running }
 
-_build_ffi_method uv_version => 'uint';
+_ffi_method uv_version => 'uint';
 
-_build_ffi_method uv_version_string => 'str';
+_ffi_method uv_version_string => 'str';
 
 sub version {
   my $self = shift;
@@ -45,13 +45,13 @@ sub version {
   return Scalar::Util::dualvar($self->uv_version, $self->uv_version_string);
 }
 
-_build_ffi_method uv_strerror => qw/str int/;
+_ffi_method uv_strerror => qw/str int/;
 
-_build_ffi_method uv_loop_new => qw/ptr/;
+_ffi_method uv_loop_new => qw/ptr/;
 
-_build_ffi_method uv_run => qw/int ptr int/;
+_ffi_method uv_run => qw/int ptr int/;
 
-_build_ffi_method uv_stop => qw/void ptr/;
+_ffi_method uv_stop => qw/void ptr/;
 
 sub start {
   my $self = shift;
@@ -74,15 +74,15 @@ sub one_tick {
   $self->uv_run($self->loop, 1);
 }
 
-_build_ffi_method uv_now => qw/uint64 ptr/;
+_ffi_method uv_now => qw/uint64 ptr/;
 
 sub now { my $self = shift; $self->uv_now($self->loop) }
 
-_build_ffi_method uv_timer_init => qw/int ptr ptr/;
+_ffi_method uv_timer_init => qw/int ptr ptr/;
 
-_build_ffi_method uv_timer_start => qw/int ptr ptr uint64 uint64/;
+_ffi_method uv_timer_start => qw/int ptr ptr uint64 uint64/;
 
-_build_ffi_method uv_timer_stop => qw/int ptr/;
+_ffi_method uv_timer_stop => qw/int ptr/;
 
 sub timer     { shift->_timer(0, @_) }
 sub recurring { shift->_timer(1, @_) }
@@ -104,7 +104,7 @@ sub _timer {
     $self->remove($id) unless $recurring; 
     return;
   };
-  my $ffi_cb = FFI::Raw::Callback->new($sub, FFI::Raw::void, FFI::Raw::ptr, FFI::Raw::int);
+  my $ffi_cb = _ffi_callback $sub, qw/void ptr int/;
   $self->uv_timer_start($timer, $ffi_cb, $timeout, $recurring ? $timeout : 0);
 
   $self->timers->{$id} = {
@@ -114,7 +114,7 @@ sub _timer {
   return $id
 }
 
-_build_ffi_method uv_timer_again => qw/int ptr/;
+_ffi_method uv_timer_again => qw/int ptr/;
 
 sub again {
   my ($self, $id) = @_;
@@ -128,7 +128,7 @@ sub remove {
   $self->uv_timer_stop($timer->{timer});
 }
 
-_build_ffi_method uv_handle_size => qw/uint uint/;
+_ffi_method uv_handle_size => qw/uint uint/;
 
 sub handle_size {
   my ($self, $type) = @_;
