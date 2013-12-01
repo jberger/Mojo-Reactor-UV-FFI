@@ -7,7 +7,7 @@ my $r = Mojo::Reactor::UV::FFI->new;
 
 say $r->version;
 
-say "Size of timer: " . $r->handle_size('timer');
+say "Size of timer: " . $r->_handle_size('timer');
 
 say 'Instance: ' . $r->loop();
 say "Now: " . $r->now();

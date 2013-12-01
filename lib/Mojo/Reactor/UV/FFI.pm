@@ -5,7 +5,6 @@ $ENV{MOJO_REACTOR} ||= __PACKAGE__;
 use Mojo::Base 'Mojo::Reactor';
 
 use Mojo::Reactor::UV::FFI::Util ':all';
-
 use List::MoreUtils qw/first_index/;
 use FFI::Raw;
 
@@ -91,8 +90,7 @@ sub _timer {
   my $self  = shift;
   my $recurring = shift;
 
-  my $size  = $self->handle_size('timer');
-  my $timer = FFI::Raw::memptr($size);
+  my $timer = $self->_malloc_handle('timer');
   $self->uv_timer_init($self->loop, $timer);
   my $id = $timer->tostr;
 
@@ -130,9 +128,15 @@ sub remove {
 
 _ffi_method uv_handle_size => qw/uint uint/;
 
-sub handle_size {
+sub _malloc_handle {
   my ($self, $type) = @_;
-  $type = lc $type;
+  my $size  = $self->_handle_size($type);
+  return FFI::Raw::memptr($size);
+}
+
+sub _handle_size {
+  my $self = shift;
+  my $type = lc shift;
   return $self->uv_handle_size(first_index { $_ eq $type } @Handle_Types);
 }
 
