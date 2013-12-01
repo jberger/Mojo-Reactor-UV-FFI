@@ -2,8 +2,7 @@
 
 use Mojo::Base -strict;
 
-BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::UV::FFI' }
-
+use Mojo::Reactor::UV::FFI;
 use Mojo::IOLoop;
 
 die 'Failed to detect Mojo::Reactor::UV::FFI' 

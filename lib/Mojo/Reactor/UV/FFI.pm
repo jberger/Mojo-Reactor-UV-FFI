@@ -1,5 +1,7 @@
 package Mojo::Reactor::UV::FFI;
 
+$ENV{MOJO_REACTOR} ||= __PACKAGE__;
+
 use Mojo::Base 'Mojo::Reactor';
 
 use List::MoreUtils qw/first_index/;
