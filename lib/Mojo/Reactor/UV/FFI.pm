@@ -52,11 +52,14 @@ _ffi_method uv_run => qw/int ptr int/;
 
 _ffi_method uv_stop => qw/void ptr/;
 
-sub start {
-  my $self = shift;
+sub start    { shift->_start(0) }
+sub one_tick { shift->_start(1) }
+
+sub _start {
+  my ($self, $mode) = @_;
   return if $self->running;
-  $self->running(1);
-  $self->uv_run($self->loop, 0);
+  local $self->{running} = 1;
+  $self->uv_run($self->loop, $mode);
 }
 
 sub stop {
@@ -64,13 +67,6 @@ sub stop {
   return unless $self->running;
   $self->uv_stop($self->loop);
   $self->running(0);
-}
-
-sub one_tick {
-  my $self = shift;
-  return if $self->running;
-  local $self->{running} = 1;
-  $self->uv_run($self->loop, 1);
 }
 
 _ffi_method uv_now => qw/uint64 ptr/;
@@ -122,7 +118,7 @@ sub again {
 
 sub remove {
   my ($self, $id) = @_;
-  my $timer = delete $self->timers->{$id};
+  my $timer = delete $self->timers->{$id} or return;
   $self->uv_timer_stop($timer->{timer});
 }
 
@@ -144,6 +140,11 @@ sub _sandbox {
   my ($self, $event, $cb) = (shift, shift, shift);
   eval { $self->$cb(@_); 1 } or $self->emit(error => "$event failed: $@");
 }
+
+#TODO extend these, which are necessary for TODO testing
+sub accept { shift }
+sub io { shift }
+sub watch { shift }
 
 1;
 
