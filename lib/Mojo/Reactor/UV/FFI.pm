@@ -141,10 +141,5 @@ sub _sandbox {
   eval { $self->$cb(@_); 1 } or $self->emit(error => "$event failed: $@");
 }
 
-#TODO extend these, which are necessary for TODO testing
-sub accept { shift }
-sub io { shift }
-sub watch { shift }
-
 1;
 
